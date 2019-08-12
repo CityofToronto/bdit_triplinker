@@ -7,10 +7,10 @@ from ortools.graph import pywrapgraph as orgraph
 from ortools.linear_solver import pywraplp as orls
 import numpy as np
 import pandas as pd
-from . import linker
+from . import linker_bipartite as linkb
 
 
-class ORLinker:
+class ORLinkerBase(linkb.BipartiteLinkerBase):
     """Base class for OR-Tools linkers."""
 
     _weight_name = None
@@ -32,7 +32,7 @@ class ORLinker:
         self._all_nodes = self._or_nodes + self._dest_nodes
 
 
-class MinCostFlowLinker(ORLinker):
+class MinCostFlowLinker(ORLinkerBase):
     """Class for finding the min. weight max. cardinality matching solution.
 
     Uses OR-Tools's `SimpleMinCostFlow`.
@@ -62,7 +62,7 @@ class MinCostFlowLinker(ORLinker):
                              self.Gw.edges[edge]['overhead_time'])))
 
     def get_max_cardinality(self):
-        self.max_card = linker.get_vazifeh_solution(self.Gw).number_of_edges()
+        self.max_card = linkb.get_vazifeh_solution(self.Gw).number_of_edges()
 
     def get_nodes_and_converters(self, nodesb_top):
         super().get_nodes_and_converters(nodesb_top)
@@ -122,7 +122,7 @@ class MinCostFlowLinker(ORLinker):
 
         return matching
 
-    def get_min_cost_flow_solution(self, G, return_matching=False):
+    def get_solution(self, G, return_matching=False):
         """Obtains minimum weight maximum cardinality matching solution.
 
         Parameters
@@ -150,7 +150,7 @@ class MinCostFlowLinker(ORLinker):
         self.get_max_cardinality()
 
         # Get bipartite digraph.
-        Gdb, nodesb_top = linker.digraph_to_bipartite(
+        Gdb, nodesb_top = linkb.digraph_to_bipartite(
             self.Gw, return_digraph=True)
 
         # Converters for node names to numerical indices.
@@ -162,11 +162,11 @@ class MinCostFlowLinker(ORLinker):
         # Get matching.
         matching = self.flow_soln_to_matching()
 
-        return linker.matching_to_digraph(
+        return linkb.matching_to_digraph(
             self.Gw, matching, return_matching=return_matching)
 
 
-class MixedIntegerLinker(ORLinker):
+class MixedIntegerLinker(ORLinkerBase):
     """Class for finding the maximum weight matching solution.
 
     Uses OR-Tools's `pywraplp.Solver`.
@@ -268,8 +268,7 @@ class MixedIntegerLinker(ORLinker):
                     self._dest_nodes[link[1]])
         return matching
 
-    def get_mip_maxweight_solution(self, G, max_weight=None,
-                                   return_matching=False):
+    def get_solution(self, G, max_weight=None, return_matching=False):
         """Obtains maximum weight matching solution.
 
         Parameters
@@ -292,7 +291,7 @@ class MixedIntegerLinker(ORLinker):
         self.get_weighted_graph(G, max_weight=max_weight)
 
         # Get bipartite digraph.
-        Gdb, nodesb_top = linker.digraph_to_bipartite(
+        Gdb, nodesb_top = linkb.digraph_to_bipartite(
             self.Gw, return_digraph=True)
 
         # Converters for node names to numerical indices, for generating
@@ -308,33 +307,5 @@ class MixedIntegerLinker(ORLinker):
         # Get matching.
         matching = self.mip_soln_to_matching()
 
-        return linker.matching_to_digraph(
+        return linkb.matching_to_digraph(
             self.Gw, matching, return_matching=return_matching)
-
-
-class BatchedLinkerMinFlow(linker.BatchedLinker):
-
-    def __init__(self, df, gph_feasible, start_time,
-                 timespan=pd.Timedelta('24 hour'), unit='min',
-                 shift_tracker=None, progress_bar=False):
-        self.maxflow = MinCostFlowLinker(unit)
-        super().__init__(df, gph_feasible, start_time, timespan=timespan,
-                         shift_tracker=shift_tracker,
-                         progress_bar=progress_bar)
-
-    def link_mtd(self, bin_graph):
-        return self.maxflow.get_min_cost_flow_solution(bin_graph)
-
-
-class BatchedLinkerMIP(linker.BatchedLinker):
-
-    def __init__(self, df, gph_feasible, start_time,
-                 timespan=pd.Timedelta('24 hour'), unit='min',
-                 shift_tracker=None, progress_bar=False):
-        self.mil = MixedIntegerLinker(unit)
-        super().__init__(df, gph_feasible, start_time, timespan=timespan,
-                         shift_tracker=shift_tracker,
-                         progress_bar=progress_bar)
-
-    def link_mtd(self, bin_graph):
-        return self.mil.get_mip_maxweight_solution(bin_graph)
