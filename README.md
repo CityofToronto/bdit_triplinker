@@ -16,9 +16,13 @@ Consequently, it assumes a variable supply of active vehicles rather than a
 fixed fleet of vehicles operated by drivers with regular work shifts (as with
 eg. taxi companies).
 
+## Installation
+
+### Dependencies
+
 ## Project Status
 
 ## License
 
-`bdit_triplinker` is licensed under the GNU General Public License v3.0 - see
-the `LICENSE` file.
+Triplinker is licensed under the GNU General Public License v3.0 - see the
+`LICENSE` file.
