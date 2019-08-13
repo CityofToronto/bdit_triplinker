@@ -1,1 +1,1 @@
-"""Package for linking vehicle-for-hire trips together."""
+"""Package for linking ridesourcing trips together."""

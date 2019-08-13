@@ -234,21 +234,21 @@ class MixedIntegerLinker(ORLinkerBase):
         # Declare objective.
         self.solver.Maximize(self.solver.Sum(sum_list))
 
-        # Each worker is assigned at most 1 task.
+        # Each drop-off is assigned at most 1 pick-up.
         for i in range(self.gain_mtx.shape[0]):
-            worker_tasks = []
+            dropoff_edges = []
             for j in range(self.gain_mtx.shape[1]):
                 if not np.isnan(self.gain_mtx[i, j]):
-                    worker_tasks.append(self._x[i, j])
-            self.solver.Add(self.solver.Sum(worker_tasks) <= 1)
+                    dropoff_edges.append(self._x[i, j])
+            self.solver.Add(self.solver.Sum(dropoff_edges) <= 1)
 
-        # Each task is assigned at most 1 worker.
+        # Each pick-up is assigned at most 1 drop-off.
         for j in range(self.gain_mtx.shape[1]):
-            task_workers = []
+            pickup_edges = []
             for i in range(self.gain_mtx.shape[0]):
                 if not np.isnan(self.gain_mtx[i, j]):
-                    task_workers.append(self._x[i, j])
-            self.solver.Add(self.solver.Sum(task_workers) <= 1)
+                    pickup_edges.append(self._x[i, j])
+            self.solver.Add(self.solver.Sum(pickup_edges) <= 1)
 
         solve_status = self.solver.Solve()
 
