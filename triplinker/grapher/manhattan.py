@@ -1,25 +1,18 @@
-"""
-Methods for creating feasibility networks for trip linking.
-"""
+"""Grapher methods that use the rotated Manhattan distance between O/D."""
 import numpy as np
 import pandas as pd
 import networkx as nx
-import sklearn.neighbors as skln
+
+from .base import GrapherBase
 
 
-class TripGrapherBase:
-    """Base class for graphers that transform trips into directed graphs."""
+class GrapherManhattanBase(GrapherBase):
+    """Base class for Manhattan distance-based graphers.
 
-    # Mean radius of the Earth, from https://en.wikipedia.org/wiki/Earth
-    _r_earth = 6.371e3
+    Includes functions than calculate Manhattan distances on a grid angled from
+    due north.
 
-    def __init__(self, df):
-        self.df = df
-
-
-class TripGrapherManhattanBase(TripGrapherBase):
-    """Base class for Manhattan distance-based graphers, with functions than
-    enable calculating Manhattan distances on a grid angled from due north."""
+    """
 
     def get_rotation_matrix(self, gridangle):
 
@@ -99,7 +92,7 @@ class TripGrapherManhattanBase(TripGrapherBase):
         return np.arctan2(dlon, dlat)
 
 
-class TripGrapherConstLimits(TripGrapherBase):
+class GrapherConstLimits(GrapherBase):
     """Base class for graphers with constant r_max, t_max, and speed."""
 
     # Speed floor, to prevent NaT issues when dividing distance and
@@ -221,71 +214,7 @@ class TripGrapherConstLimits(TripGrapherBase):
         return G
 
 
-class TripGrapherHaversine(TripGrapherConstLimits):
-    """Transforms trip data into directed graph.  Uses haversine distance.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        DataFrame with columns: 'dropoff_datetime', 'dropoff_latitude',
-        'dropoff_longitude', 'pickup_datetime', 'pickup_latitude',
-        'pickup_longitude'.
-    t_max : pandas.Timedelta
-        Maximum time duration between dropoff and pickup.
-    r_max : float or None, optional
-        Maximum great circle distance between dropoff and pickup.  If `None`
-        (default), will be inferred from `speed` and `t_max`.
-    speed : float, optional
-        Typical vehicle speed, in km/h.  Default: 7.56, the typical NYC
-        downtown traffic speed during rush hour.
-    """
-
-    def get_neighbours(self, rides, lat, lon, r_max):
-        """Find closest neighbours of (lat, lon) within radius r_max.
-
-        Uses haversine distance.
-
-        Parameters
-        ----------
-        rides : pandas.DataFrame
-            DataFrame of pickup locations and times.  Must include
-            'pickup_datetime', 'pickup_latitude', 'pickup_longitude'.  Takes
-            the index as ID.
-        lat : float
-            Dropoff latitude.
-        lon : float
-            Dropoff longitude.
-        r_max : float
-            Maximum haversine distance between dropoff and pickup, in km.
-
-        Returns
-        -------
-        neighbours : numpy.ndarray
-            Array of rides indices (can used for rides.iloc).
-        distances : numpy.ndarray
-            Corresponding distances in km.
-        """
-        dropoff_lat = np.radians(lat)
-        dropoff_lon = np.radians(lon)
-        rides_latlon = np.radians(rides[['pickup_latitude',
-                                         'pickup_longitude']].values)
-
-        # Create ball tree to find nearest neighbours.  Pretty sure
-        # metric="haversine" also works - this is just so I remember which
-        # class is being used.
-        balltree = skln.BallTree(rides_latlon,
-                                 metric=skln.dist_metrics.HaversineDistance())
-        # Nearest neighbours done on unit sphere, so physical distances should
-        # be divided by radius to get unit great circle distances.
-        neighbours, distances = balltree.query_radius(
-            [[dropoff_lat, dropoff_lon], ], r_max / self._r_earth,
-            return_distance=True)
-
-        return neighbours[0], distances[0] * self._r_earth
-
-
-class TripGrapherManhattan(TripGrapherConstLimits,
-                           TripGrapherManhattanBase):
+class GrapherManhattan(GrapherConstLimits, GrapherManhattanBase):
     """Transforms trip data into directed graph.  Uses Manhattan distance.
 
     Parameters
@@ -309,8 +238,8 @@ class TripGrapherManhattan(TripGrapherConstLimits,
         downtown traffic speed during rush hour.
     """
     # Note: MRO is TripGrapherConstLimits, then RotatedManhattanDistance.
-    # Since the latter just copies TripGrapherBase.__init__, which doesn't call
-    # super().__init__, the code in TripGrapherBase.__init__ is only called
+    # Since the latter just copies GrapherBase.__init__, which doesn't call
+    # super().__init__, the code in GrapherBase.__init__ is only called
     # once.
 
     def __init__(self, df, t_max, r_max=None, gridangle=0., speed=7.56):
@@ -355,99 +284,3 @@ class TripGrapherManhattan(TripGrapherConstLimits,
         bounds = sorted_distances < r_max
 
         return sorted_indices[bounds], sorted_distances[bounds]
-
-
-class TripGrapherpgRouting(TripGrapherManhattanBase):
-    """Translates raw PTC data and a set of PTC ID links generated from
-    pgRouting into a networkx graph.
-
-    Parameters
-    ----------
-    df_data : pandas.DataFrame
-        DataFrame of pickup locations and times.  Must include 'ptctripid',
-        'pickup_datetime', 'pickup_latitude', 'pickup_longitude'.  Takes the
-        index as node ID.
-    df_links : pandas.DataFrame
-        DataFrame with a column 'from_trip' of dropoff 'ptctripid', a
-        corresponding column 'to_trip' of pickup 'ptctripid', and a column
-        'dt' representing overheading time in seconds.
-    manhattan_distances : bool, optional
-        If `True`, estimate link distances using Manhattan distance.  Default:
-        `False`.
-    time_units : str, optional
-        If 'sec', switches weight units to seconds.  Default: 'min'.
-    gridangle : float or tuple, optional
-        Angle - in degrees - of north-south streets on the city grid from from
-        due north.  Alternatively, can pass a tuple of (lon_1, lat_1,
-        lon_2, lat_2) of a north-south street in the grid, and the
-        angle will be auto-calculated from `longlat_to_gridangle`.  Used only
-        if `manhattan_distances` is `True`. Default: 0.
-    """
-
-    def __init__(self, df_data, df_links, manhattan_distances=False,
-                 time_units='min', gridangle=0.):
-        super().__init__(df_data)
-        self.links = df_links
-        self.manhattan_distances = manhattan_distances
-        self.time_units = time_units
-        if self.manhattan_distances:
-            self.get_rotation_matrix(gridangle)
-
-    def create_graph(self, t_max=np.infty):
-        """Create a directed graph from raw data and links.
-
-        Parameters
-        ----------
-        t_max : float, optional
-            Maximum deadheading time of feasible link.  Default: `numpy.infty`,
-            in which case all links from `self.links` are used.  (Since the
-            feasibility graph itself usually is time-limited, the graph
-            produced may still have limitations.)
-
-        Returns
-        -------
-        routed_net : networkx.DiGraph
-            Graph of feasible links between trips, with 'deadhead_time' and
-            'overhead_time'
-        """
-        # Map ptctripids to indices, and merge
-        ptcindex = pd.DataFrame({'ptctripid': self.df['ptctripid'],
-                                 'ptcindex': self.df.index})
-        links_merged = pd.merge(
-            pd.merge(self.links, ptcindex,
-                     left_on='from_trip', right_on='ptctripid'),
-            ptcindex, left_on='to_trip', right_on='ptctripid',
-            suffixes=('_from', '_to'))
-
-        # Create routed network.
-        routed_net = nx.DiGraph()
-        routed_net.add_nodes_from(self.df.index.values)
-
-        # Populate routed network with edges from links.
-        for i, row in links_merged.iterrows():
-            deadhead_time = (
-                (self.df.loc[row['ptcindex_to'], 'pickup_datetime'] -
-                 self.df.loc[row['ptcindex_from'], 'dropoff_datetime']) /
-                np.timedelta64(1, 'm'))
-            if deadhead_time <= t_max:
-                if self.time_units == 'sec':
-                    routed_net.add_edge(row['ptcindex_from'],
-                                        row['ptcindex_to'],
-                                        deadhead_time=(60. * deadhead_time),
-                                        overhead_time=row['dt'])
-                else:
-                    routed_net.add_edge(row['ptcindex_from'],
-                                        row['ptcindex_to'],
-                                        deadhead_time=deadhead_time,
-                                        overhead_time=(row['dt'] / 60.))
-
-        if self.manhattan_distances:
-            for edge in routed_net.edges():
-                dist = self.get_manhattan_distances(
-                    self.df.loc[edge[0], 'dropoff_latitude'],
-                    self.df.loc[edge[0], 'dropoff_longitude'],
-                    self.df.loc[edge[1], 'pickup_latitude'],
-                    self.df.loc[edge[1], 'pickup_longitude'])
-                routed_net.edges[edge[0], edge[1]]['r'] = dist[0]
-
-        return routed_net

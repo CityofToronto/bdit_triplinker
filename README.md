@@ -42,7 +42,7 @@ sys.path.append('<FULL PATH OF bdit_triplinker>')
 To test the package, run the following in this folder:
 
 ```
-pytest --pyargs triplinker
+pytest -s -v --pyargs triplinker
 ```
 
 ## Project Status
