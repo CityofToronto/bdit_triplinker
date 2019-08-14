@@ -205,7 +205,7 @@ class GrapherConstLimits(GrapherBase):
                      'deadhead_time': (
                         (fr['pickup_datetime'] - row['dropoff_datetime']) /
                         np.timedelta64(1, 'm')),
-                     'overhead_time': (
+                     'enroute_time': (
                         60. * fr['distance (km)'] / self.speed)})
                     for (fr_i, fr) in
                     feasible_rides.head(max_connections).iterrows()]

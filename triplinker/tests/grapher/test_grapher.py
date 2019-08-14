@@ -48,65 +48,72 @@ class TestGrapherBase:
 class TestGrapherDB(TestGrapherBase):
     """Tests converting dataframe feasible links into graph."""
 
+    @staticmethod
+    def _feasiblenet_to_df(df, net):
+        """Converts a feasible link network to a DataFrame of connections."""
+        from_trip = []
+        to_trip = []
+        enroute = []
+
+        for edge in net.edges:
+            from_trip.append(df.loc[edge[0], 'ptctripid'])
+            to_trip.append(df.loc[edge[1], 'ptctripid'])
+            # Edge overhead time stored as minutes, but .
+            enroute.append(60. * net.edges[edge]['enroute_time'])
+
+        return pd.DataFrame({'from_trip': from_trip,
+                             'to_trip': to_trip,
+                             'dt': enroute})
+
     @pytest.fixture()
-    def testdf(self, austin_data):
-        # Create version of raw data with a trip ID.
+    def refdf(self, austin_data):
+        """Test DataFrame of Austin data that includes dummy trip ID."""
         df = austin_data['df'].copy()
         df['ptctripid'] = ['trip_{0:d}'.format(idx + 10000)
                            for idx in df.index]
         return df
 
     @pytest.fixture()
-    def links(self, austin_data, testdf):
-        from_trip = []
-        to_trip = []
-        enroute = []
+    def refnet(self, austin_data):
+        """Test network of Austin data with distances removed."""
+        # Copying a network deepcopies it.
+        # https://stackoverflow.com/questions/39555831/how-do-i-copy-but-not-deepcopy-a-networkx-graph
+        net = austin_data['net'].copy()
+        for edge in net.edges:
+            del net.edges[edge]['r']
+        return net
 
-        for edge in austin_data['net'].edges():
-            from_trip.append(testdf.loc[edge[0], 'ptctripid'])
-            to_trip.append(testdf.loc[edge[1], 'ptctripid'])
-            # Edge overhead time stored as minutes, but .
-            enroute.append(60. *
-                           austin_data['net'].edges[edge]['enroute_time'])
+    @pytest.fixture()
+    def reflinks(self, refnet, refdf):
+        """DataFrame of feasible (Manhattan) links in the Austin data."""
+        return self._feasiblenet_to_df(refdf, refnet)
 
-        return pd.DataFrame({'from_trip': from_trip,
-                             'to_trip': to_trip,
-                             'dt': enroute})
-
-    def test_create_graph(self, austin_data, testdf, links):
+    def test_create_graph(self, refdf, refnet, reflinks):
         """Check if we can translate an entire dataframe to a graph."""
-        gphr = grapher.GrapherDB(testdf, links)
+        gphr = grapher.GrapherDB(refdf, reflinks)
         net = gphr.create_graph()
-        assert utils.graphs_equivalent(net, austin_data['net'])
+        assert utils.graphs_equivalent(net, refnet)
 
-    def test_create_reduced_graph(self, austin_data, testdf, links):
+    def test_create_reduced_graph(self, refdf, refnet, reflinks):
         """Check if we can restrict valid links to below some critical dt."""
-        gphr = grapher.GrapherDB(testdf, links)
+        gphr = grapher.GrapherDB(refdf, reflinks)
         t_max = 9.2356
         net_reduced = gphr.create_graph(t_max=t_max)
 
         # Produce a new links dataframe with only links below t_max.
-        from_trip = []
-        to_trip = []
-        enroute = []
-        for edge in net_reduced.edges():
-            from_trip.append(testdf.loc[edge[0], 'ptctripid'])
-            to_trip.append(testdf.loc[edge[1], 'ptctripid'])
-            enroute.append(net_reduced.edges[edge]['enroute_time'] * 60)
-        link_check = pd.DataFrame(
-            {'from_trip': from_trip, 'to_trip': to_trip, 'dt': enroute})
+        link_check = self._feasiblenet_to_df(refdf, net_reduced)
 
         # Join the original and check dataframes together.
-        link_check = pd.merge(links, link_check,
+        link_check = pd.merge(reflinks, link_check,
                               on=('from_trip', 'to_trip'),
                               suffixes=('_original', '_check'), how='left')
 
-        ptcid = dict(zip(testdf['ptctripid'].values, testdf.index.values))
+        ptcid = dict(zip(refdf['ptctripid'].values, refdf.index.values))
         deadheading = []
         for _, row in link_check.iterrows():
             deadheading.append(
-                (testdf.loc[ptcid[row['to_trip']], 'pickup_datetime'] -
-                 testdf.loc[ptcid[row['from_trip']], 'dropoff_datetime']) /
+                (refdf.loc[ptcid[row['to_trip']], 'pickup_datetime'] -
+                 refdf.loc[ptcid[row['from_trip']], 'dropoff_datetime']) /
                  np.timedelta64(1, 'm'))
         link_check['deadheading'] = deadheading
 
@@ -270,92 +277,6 @@ class TestGrapherDB(TestGrapherBase):
 #         assert np.allclose(dist_ref, dist, rtol=1e-6, atol=1e-8)
 
 
-# class TestGrapherHaversine(TestGrapherConstBase):
-#     """Tests haversine-based grapher."""
-
-#     def get_feasible_pickups(self, dropoff_row, t_max, r_max, avgspeed):
-
-#         dropoff_time = dropoff_row['dropoff_datetime']
-#         # Convert long/lat of dropoff point to radians.
-#         dropoff_long = dropoff_row['dropoff_longitude'] * np.pi / 180.
-#         dropoff_lat = dropoff_row['dropoff_latitude'] * np.pi / 180.
-
-#         # Consider only pickup points that are below the maximum
-#         # connection distance and time.
-#         rides_timecut = self.df.loc[
-#             (self.df['pickup_datetime'] > dropoff_time) &
-#             (self.df['pickup_datetime'] <= dropoff_time + t_max),
-#             ['pickup_datetime', 'pickup_latitude', 'pickup_longitude']]
-#         rides_latlong = rides_timecut[
-#             ['pickup_latitude', 'pickup_longitude']].values * np.pi / 180.
-
-#         # Filter only for feasible rides.
-#         if len(rides_latlong):
-#             balltree = skln.BallTree(
-#                 rides_latlong, metric=skln.dist_metrics.HaversineDistance())
-#             neighbours, distances = balltree.query_radius(
-#                 [[dropoff_lat, dropoff_long], ],
-#                 r_max / self.radius, return_distance=True)
-#             neighbours = neighbours[0]
-#             distances = distances[0]
-
-#             # Make a copy of only rides within maximum cutoffs.
-#             feasible_pickups = rides_timecut.iloc[neighbours, :].copy()
-#             feasible_pickups['distance (km)'] = distances * self.radius
-#             feasible_pickups = feasible_pickups.loc[
-#                 (feasible_pickups['pickup_datetime'] -
-#                  dropoff_row['dropoff_datetime']) >
-#                 (feasible_pickups['distance (km)'].values *
-#                  pd.Timedelta('1 hours') / max(avgspeed, 1e-4)), :].copy()
-#         else:
-#             feasible_pickups = pd.DataFrame(
-#                 {'pickup_datetime': [], 'pickup_latitude': [],
-#                  'pickup_longitude': [], 'distance (km)': []})
-
-#         return feasible_pickups
-
-#     # Number of matches manually determined during test development.
-#     @pytest.mark.parametrize(
-#         ('row_num', 't_max', 'r_max', 'spd', 'n_match'),
-#         [(19, pd.Timedelta('3 minutes'), 1.4, 7.36, 5),
-#          (589, pd.Timedelta('5 minutes'), 8.6, 10.52, 3),
-#          (4, pd.Timedelta('0 minutes'), 5.3, 4.2, 0),
-#          (6, pd.Timedelta('4 minutes'), 0., 1.7, 0),
-#          (13, pd.Timedelta('0 minutes'), 0., 3.2, 0),
-#          (19, pd.Timedelta('3 minutes'), 1.4, 0., 0)])
-#     def test_feasible_pickups(self, row_num, t_max, r_max, spd, n_match):
-#         dropoff_row = self.df.iloc[row_num, :]
-#         fp_ref = self.get_feasible_pickups(dropoff_row, t_max, r_max, spd)
-#         # Dummy grapher.
-#         gphr = grapher.TripGrapherHaversine(self.df, None, None, speed=None)
-#         fp = gphr.get_feasible_pickups(dropoff_row, t_max, r_max, spd)
-#         assert np.all(fp_ref['pickup_datetime'].values ==
-#                       fp['pickup_datetime'].values)
-#         float_columns = ['pickup_latitude', 'pickup_longitude',
-#                          'distance (km)']
-#         assert np.allclose(fp_ref[float_columns].values,
-#                            fp[float_columns].values)
-#         assert fp.shape[0] == n_match
-
-#     # Number of edges manually determined during test development.
-#     @pytest.mark.parametrize(
-#         ('t_max', 'r_max', 'spd', 'subset', 'max_connections', 'n_edges'),
-#         [(pd.Timedelta('2 minutes'), 1.1, 7.56, (), 5, 189),
-#          (pd.Timedelta('35 minutes'), 8.7, 4.1, (0, 64), 20, 930),
-#          (pd.Timedelta('0 minutes'), 3.1, 0., (15, 19), 20, 0),
-#          (pd.Timedelta('4 minutes'), 1.6, 18.5, (10, 15, 4), 10, 15),
-#          (pd.Timedelta('4 minutes'), 1.3, 18.5, (0, 20), -89, 0)])
-#     def test_graph_generator(self, t_max, r_max, spd, subset,
-#                              max_connections, n_edges):
-#         G_ref = self.get_triplink_graph(subset, max_connections, t_max,
-#                                         r_max, spd)
-#         gphr = grapher.TripGrapherHaversine(self.df, t_max, r_max=r_max,
-#                                             speed=spd)
-#         G = gphr.create_graph(subset=subset, max_connections=max_connections)
-#         assert utils.graphs_equivalent(G_ref, G)
-#         assert G.number_of_edges() == n_edges
-
-
 # class TestGrapherManhattan(TestGrapherConstBase):
 #     """Tests Manhattan-based grapher."""
 
@@ -459,79 +380,3 @@ class TestGrapherDB(TestGrapherBase):
 #         G = gphr.create_graph(subset=subset, max_connections=max_connections)
 #         assert utils.graphs_equivalent(G_ref, G)
 #         assert G.number_of_edges() == n_edges
-
-
-# class TestTripGrapherpgRouting(TestGrapherBase):
-#     """Tests converting pgRouting results into graph."""
-
-#     def test_graph_generator(self):
-#         # Create version of raw data with a trip ID.
-#         df = self.df.copy()
-#         df['ptctripid'] = ['trip_{0:d}'.format(idx + 10000)
-#                            for idx in df.index]
-
-#         # Get a graph from NYC data.
-#         gridangle = (-73.999169, 40.739246, -73.938127, 40.822952)
-#         gphr = grapher.TripGrapherManhattan(
-#             df, pd.Timedelta('20 minutes'),
-#             gridangle=gridangle, speed=7.56)
-#         G_ref = gphr.create_graph(max_connections=40)
-
-#         # Convert graph to fake data.
-#         from_trip = []
-#         to_trip = []
-#         enroute = []
-
-#         for edge in G_ref.edges():
-#             from_trip.append(df.loc[edge[0], 'ptctripid'])
-#             to_trip.append(df.loc[edge[1], 'ptctripid'])
-#             # Edge overhead time stored as minutes, but .
-#             enroute.append(60. * G_ref.edges[edge]['enroute_time'])
-
-#         links = pd.DataFrame({'from_trip': from_trip,
-#                               'to_trip': to_trip,
-#                               'dt': enroute})
-
-#         router = grapher.TripGrapherpgRouting(
-#             df, links, manhattan_distances=True, gridangle=gridangle)
-
-#         # First check generic graph-making.
-#         G = router.create_graph()
-#         assert utils.graphs_equivalent(G, G_ref)
-
-#         # Now, check if we can restrict valid links to below some critical dt.
-#         # See if we can reproduce links DataFrame.
-#         t_max = 9.2356
-#         G_reduced = router.create_graph(t_max=t_max)
-
-#         from_trip = []
-#         to_trip = []
-#         enroute = []
-#         for edge in G_reduced.edges():
-#             from_trip.append(df.loc[edge[0], 'ptctripid'])
-#             to_trip.append(df.loc[edge[1], 'ptctripid'])
-#             enroute.append(G_reduced.edges[edge]['enroute_time'] * 60)
-
-#         # Join the original and check dataframes together.
-#         link_check = pd.DataFrame(
-#             {'from_trip': from_trip, 'to_trip': to_trip, 'dt': enroute})
-#         link_check = pd.merge(links, link_check, on=('from_trip', 'to_trip'),
-#                               suffixes=('_original', '_check'), how='left')
-
-#         ptcid = dict(zip(df['ptctripid'].values, df.index.values))
-#         deadheading = []
-#         for i, row in link_check.iterrows():
-#             deadheading.append(
-#                 (df.loc[ptcid[row['to_trip']], 'pickup_datetime'] -
-#                  df.loc[ptcid[row['from_trip']], 'dropoff_datetime']) /
-#                 np.timedelta64(1, 'm'))
-#         link_check['deadheading'] = deadheading
-
-#         # Columns that exist in `link_check` should match ones in the original.
-#         reduced = link_check['dt_check'].notnull()
-#         assert np.allclose(
-#             link_check.loc[reduced, 'dt_original'].values,
-#             link_check.loc[reduced, 'dt_check'].values, rtol=1e-6, atol=1e-8)
-#         # Columns that don't should all have `dt > t_max`.
-#         assert np.all(link_check.loc[reduced, 'deadheading'].values <= t_max)
-#         assert np.all(link_check.loc[~reduced, 'deadheading'].values > t_max)

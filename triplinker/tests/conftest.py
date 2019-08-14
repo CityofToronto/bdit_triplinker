@@ -55,4 +55,4 @@ def austin_data(request):
                    .with_traceback(sys.exc_info()[2]))
     request.addfinalizer(check_df_unchanged)
 
-    return {'df': df, 'gphr': gphr, 'net': net}
+    return {'df': df, 'gphr': gphr, 'net': net, 'gridangle': gridangle_austin}
