@@ -2,15 +2,14 @@
 Linking methods that use Google's OR-Tools package
 (https://developers.google.com/optimization/).
 """
-
+import numpy as np
 from ortools.graph import pywrapgraph as orgraph
 from ortools.linear_solver import pywraplp as orls
-import numpy as np
-import pandas as pd
-from . import linker_bipartite as linkb
+
+from .bipartite import BipartiteLinkerBase
 
 
-class ORLinkerBase(linkb.BipartiteLinkerBase):
+class ORLinkerBase(BipartiteLinkerBase):
     """Base class for OR-Tools linkers."""
 
     _weight_name = None
@@ -32,9 +31,11 @@ class ORLinkerBase(linkb.BipartiteLinkerBase):
         self._all_nodes = self._or_nodes + self._dest_nodes
 
 
-class MinCostFlowLinker(ORLinkerBase):
-    """Class for finding the min. weight max. cardinality matching solution.
+class MinWeightMaxCardinalityLinker(ORLinkerBase):
+    """Minimum weight maximum cardinality linking solution.
 
+    Casts the problem as a minimum cost flow problem following
+    https://developers.google.com/optimization/assignment/assignment_min_cost_flow
     Uses OR-Tools's `SimpleMinCostFlow`.
     """
     # This is a class and not a function mainly for hackability and testing
@@ -62,7 +63,7 @@ class MinCostFlowLinker(ORLinkerBase):
                              self.Gw.edges[edge]['overhead_time'])))
 
     def get_max_cardinality(self):
-        self.max_card = linkb.get_vazifeh_solution(self.Gw).number_of_edges()
+        self.max_card = lb.get_vazifeh_solution(self.Gw).number_of_edges()
 
     def get_nodes_and_converters(self, nodesb_top):
         super().get_nodes_and_converters(nodesb_top)
@@ -150,7 +151,7 @@ class MinCostFlowLinker(ORLinkerBase):
         self.get_max_cardinality()
 
         # Get bipartite digraph.
-        Gdb, nodesb_top = linkb.digraph_to_bipartite(
+        Gdb, nodesb_top = lb.digraph_to_bipartite(
             self.Gw, return_digraph=True)
 
         # Converters for node names to numerical indices.
@@ -162,13 +163,15 @@ class MinCostFlowLinker(ORLinkerBase):
         # Get matching.
         matching = self.flow_soln_to_matching()
 
-        return linkb.matching_to_digraph(
+        return lb.matching_to_digraph(
             self.Gw, matching, return_matching=return_matching)
 
 
-class MixedIntegerLinker(ORLinkerBase):
-    """Class for finding the maximum weight matching solution.
+class MinWeightMaximalLinker(ORLinkerBase):
+    """Minimum weight maximal matching linker.
 
+    Casts the problem as a mixed-integer programming one following
+    https://developers.google.com/optimization/assignment/assignment_mip .
     Uses OR-Tools's `pywraplp.Solver`.
     """
     # This is a class and not a function mainly for hackability and testing
@@ -291,7 +294,7 @@ class MixedIntegerLinker(ORLinkerBase):
         self.get_weighted_graph(G, max_weight=max_weight)
 
         # Get bipartite digraph.
-        Gdb, nodesb_top = linkb.digraph_to_bipartite(
+        Gdb, nodesb_top = lb.digraph_to_bipartite(
             self.Gw, return_digraph=True)
 
         # Converters for node names to numerical indices, for generating
@@ -307,5 +310,5 @@ class MixedIntegerLinker(ORLinkerBase):
         # Get matching.
         matching = self.mip_soln_to_matching()
 
-        return linkb.matching_to_digraph(
+        return lb.matching_to_digraph(
             self.Gw, matching, return_matching=return_matching)

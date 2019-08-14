@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 
+
 class BatchedLinker:
     """Base class for batch-linking trips."""
 

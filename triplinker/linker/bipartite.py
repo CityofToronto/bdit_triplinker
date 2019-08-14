@@ -1,10 +1,5 @@
-"""
-Linking methods that require transforming the digraph into a bipartite graph.
-"""
+"""Linking methods that transform the graph into a bipartite one."""
 import networkx as nx
-import numpy as np
-import pandas as pd
-import tqdm
 
 
 class BipartiteLinkerBase:
@@ -37,6 +32,7 @@ class BipartiteLinkerBase:
         By default, graph is undirected for compatibility with networkx's
         Hopcroft-Karp and Eppstein matching algorithms.  See
         https://networkx.github.io/documentation/stable/reference/algorithms/bipartite.html
+
         """
         if return_digraph:
             Gb = nx.DiGraph()
@@ -88,6 +84,7 @@ class BipartiteLinkerBase:
         directed_matching : list
             List of edges in [(node_from, node_to), ...] format.  Only returned
             if `return_matching` is `True`.
+
         """
         # Convert the node indices to the digraph's native dtype.
         random_node = next(iter(G.nodes))
@@ -127,6 +124,13 @@ class MaxCardinalityLinker(BipartiteLinkerBase):
     """Unweighted maximum cardinality linker.
 
     This is the algorithm used by Vazifeh et al. 2018.
+
+    Notes
+    -----
+    Unlike `linker.MinWeightMaxCardinalityLinker`, this class simply returns
+    *one* maximum cardinality solution, rather than the one with minimum total
+    weight.
+
     """
 
     def get_solution(self, G, return_matching=False):
@@ -147,6 +151,7 @@ class MaxCardinalityLinker(BipartiteLinkerBase):
         directed_matching : list
             List of edges in [(node_from, node_to), ...] format.  Only
             returned if `return_matching` is `True`.
+
         """
         Gb, nodesb_top = self.digraph_to_bipartite(G)
         matching = nx.bipartite.maximum_matching(Gb, top_nodes=nodesb_top)
