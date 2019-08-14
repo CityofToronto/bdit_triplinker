@@ -1,8 +1,8 @@
 """Test suite preprocessing.
 
 Main purpose is to load the sample Ride Austin data from `../../data`, and then
-passing it on as a fixture to the various tests.  This enables multiple tests
-to use the sample data while only loading it once.
+passing it on as a fixture to the various tests.  This allows us to load the
+data just once but use it in multiple tests
 
 References:
 https://docs.pytest.org/en/latest/fixture.html#fixture-finalization-executing-teardown-code
