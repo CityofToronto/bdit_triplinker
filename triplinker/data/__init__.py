@@ -17,3 +17,5 @@ AUSTIN_DATA = _full_path('austin_data.csv')
 https://data.world/ride-austin/ride-austin-june-6-april-13 and
 https://data.world/ride-austin/ride-austin-june-6-april-13-part-2
 """
+
+NYC_TAXI_TRIPDATA = _full_path('test_data_nyc.csv')
