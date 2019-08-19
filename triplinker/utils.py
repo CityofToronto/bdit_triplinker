@@ -36,6 +36,7 @@ def graphs_equivalent_withadj(graph1, graph2):
     # https://networkx.github.io/documentation/stable/reference/classes/generated/networkx.Graph.adjacency.html
     return list(sorted(graph1.adjacency())) == list(sorted(graph2.adjacency()))
 
+
 def get_paths(G):
     """Retrieves the set of all paths in a solution graph.
 
