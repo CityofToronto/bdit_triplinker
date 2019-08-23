@@ -5,14 +5,31 @@ import tqdm
 
 
 class BatchedLinker:
-    """Base class for batch-linking trips."""
+    """Link trip in batches to simulate dynamic trip linking.
 
-    def __init__(self, df, gph_feasible, start_time,
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame of ptc pickups and dropoffs.
+    gph_feasible : networkx.classes.digraph.DiGraph
+        Graph of feasible links between trips.  Node IDs should match the
+        indices in `df`.
+    linker : linker subclass
+        Trip linker class.
+    start_time : pandas.Timestamp
+        Start time of day.
+    timespan : pandas.Timedelta, optional
+        Entire timespan being linked.  Default: 24 hours.
+
+    """
+
+    def __init__(self, df, gph_feasible, linker, start_time,
                  timespan=pd.Timedelta('24 hour'), progress_bar=False):
         self.df = df
         self.gph_feasible = gph_feasible
         self.start_time = start_time
         self.timespan = timespan
+        self.linker = linker
         self._disable_tqdm = True if not progress_bar else False
 
         # Get list of time-ordered pickup points (`sort_values` is
@@ -56,7 +73,7 @@ class BatchedLinker:
     def link_mtd(self, bin_graph):
         raise NotImplementedError
 
-    def get_batch_linking(self, t_bin):
+    def get_batch_solution(self, t_bin):
         """Get batched link solution.
 
         Parameters
@@ -81,28 +98,7 @@ class BatchedLinker:
         for i in tqdm.tqdm(range(nbins), disable=self._disable_tqdm):
             bin_graph = self.get_bin_graph(soln, bin_edges[i:i + 2])
             if bin_graph.number_of_edges():
-                bin_graph_soln = self.link_mtd(bin_graph)
+                bin_graph_soln = self.linker.get_solution(bin_graph)
                 self.add_edges(soln, bin_graph_soln)
 
         return soln
-
-
-class BatchedLinkerVazifeh(BatchedLinker):
-    """Link trip in batches to simulate dynamic trip linking.  Uses
-    Vazifeh et al. 2018 minimum fleet size linker.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        DataFrame of ptc pickups and dropoffs.
-    gph_feasible : networkx.classes.digraph.DiGraph
-        Graph of feasible links between trips.  Node IDs should match the
-        indices in `df`.
-    start_time : pandas.Timestamp
-        Start time of day.
-    timespan : pandas.Timedelta, optional
-        Entire timespan being linked.  Default: 24 hours.
-    """
-
-    def link_mtd(self, bin_graph):
-        return get_vazifeh_solution(bin_graph)
