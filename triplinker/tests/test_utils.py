@@ -40,3 +40,52 @@ class TestUtils:
         # Extreme example of empty graph.
         empty_graph = nx.Graph()
         assert utils.graphs_equivalent(empty_graph, empty_graph.copy())
+
+    def test_find_paths(self):
+
+        # Test get_paths on simple paths.  Originally these were linked to
+        # TestMaxCardinalityLinkerSimple, but moved here during refactoring.
+        Graphs = []
+        expected_paths = []
+
+        # Vazifeh Fig. 1, slightly modified to guarantee one solution.
+        Graphs.append(nx.DiGraph())
+        Graphs[-1].add_nodes_from('ABCDEFGHIJKLMNOPQRST')
+        Graphs[-1].add_edges_from(
+            [('A', 'B'), ('B', 'C'), ('C', 'H'), ('D', 'E'), ('E', 'F'),
+             ('F', 'G'), ('G', 'I'), ('I', 'J'), ('J', 'K'), ('L', 'N'),
+             ('M', 'O'), ('N', 'Q'), ('O', 'P'),
+             ('Q', 'R', {'test_float': 489.6853}), ('R', 'S'), ('S', 'T')])
+        expected_paths.append(
+            [['A', 'B', 'C', 'H'],
+             ['D', 'E', 'F', 'G', 'I', 'J', 'K'],
+             ['L', 'N', 'Q', 'R', 'S', 'T'],
+             ['M', 'O', 'P']])
+
+        # Extreme case of single path.
+        Graphs.append(nx.DiGraph())
+        Graphs[-1].add_nodes_from('ABCDE')
+        Graphs[-1].add_edges_from(
+            [('A', 'B'), ('B', 'C'), ('C', 'D'), ('D', 'E')])
+        expected_paths.append(
+            [['A', 'B', 'C', 'D', 'E'], ])
+
+        # Extreme case of no connections.
+        Graphs.append(nx.DiGraph())
+        Graphs[-1].add_nodes_from('ABCDE')
+        expected_paths.append(
+            [['A', ], ['B', ], ['C', ], ['D', ], ['E', ]])
+
+        # Connections staggered in time.
+        Graphs.append(nx.DiGraph())
+        Graphs[-1].add_nodes_from('ABCDEF')
+        Graphs[-1].add_edges_from(
+            [('A', 'D'), ('B', 'E'), ('C', 'F')])
+        expected_paths.append(
+            [['A', 'D'], ['B', 'E'], ['C', 'F']])
+
+        for i in range(len(Graphs)):
+            paths = utils.get_paths(Graphs[i])
+            # Path order depends on node iterator order, which appears to be
+            # system/OS dependent, so compare sorted paths.
+            assert sorted(paths) == sorted(expected_paths[i])

@@ -16,9 +16,38 @@ Consequently, it assumes a variable supply of active vehicles rather than a
 fixed fleet of vehicles operated by drivers with regular work shifts (as with
 eg. taxi companies).
 
+## Usage
+
+### Dependencies
+
+```
+networkx==2.2
+numpy>=1.14
+pandas>=0.23
+pytest>=3.8.0
+scikit-learn>=0.20
+```
+
+### Installation
+
+To import `triplinker`, add this folder to the Python PATH, eg. with
+
+```
+import sys
+sys.path.append('<FULL PATH OF bdit_triplinker>')
+```
+
+### Testing
+
+To test the package, run the following in this folder:
+
+```
+pytest -s -v --pyargs triplinker
+```
+
 ## Project Status
 
 ## License
 
-`bdit_triplinker` is licensed under the GNU General Public License v3.0 - see
-the `LICENSE` file.
+Triplinker is licensed under the GNU General Public License v3.0 - see the
+`LICENSE` file.
