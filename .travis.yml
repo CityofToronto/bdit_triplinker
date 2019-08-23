@@ -1,4 +1,5 @@
 # From https://github.com/kangwonlee/travis-yml-conda-posix-nt/blob/master/.travis.yml
+# See alternative here: https://docs.travis-ci.com/user/languages/python/#running-python-tests-on-multiple-operating-systems
 
 language : shell
 
@@ -6,6 +7,10 @@ env:
   - CONDA_PYTHON=3.5
   - CONDA_PYTHON=3.6
   - CONDA_PYTHON=3.7
+  - NUMPY_VERSION=1.13
+  - NUMPY_VERSION=1.16
+  - NETWORKX_VERSION=0.22
+  - NETWORKX_VERSION=0.23
 
 os:
   - linux
@@ -47,9 +52,9 @@ install:
   - echo "Python $CONDA_PYTHON running on $TRAVIS_OS_NAME";
   - conda env create --name test-environment python=$CONDA_PYTHON --file=./triplinker/tests/travis_miniconda/env.${CONDA_PYTHON}.yml;
   - conda activate test-environment;
-  - pip install --upgrade pip;
+  - python -m pip install --upgrade pip;
   - conda --version ; python --version ; pip --version;
-  - pip install --user -r requirements.txt
+  - pip install --user -r ./triplinker/tests/travis_miniconda/requirements.txt
 
 script:
   - pytest -s -v --pyargs triplinker
