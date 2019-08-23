@@ -1,3 +1,21 @@
+import pytest
+
+class TestLinkerBase:
+
+    @pytest.fixture()
+    def df(self, austin_data):
+        """Test DataFrame of Austin data."""
+        return austin_data['df'].copy()
+
+    @pytest.fixture()
+    def gphr(self, austin_data):
+        """Austin data GrapherManhattan instance."""
+        return austin_data['gphr']
+
+    @pytest.fixture()
+    def net(self, austin_data):
+        """Test network of Austin data."""
+        return austin_data['net'].copy()
 
 
 # class TestBatchedLinkers(TestLinkerdfBase):

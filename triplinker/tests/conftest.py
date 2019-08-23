@@ -44,6 +44,7 @@ def austin_data(request):
     # Post test-suite check that df is unchanged after all testing.
     # Exception handling from https://stackoverflow.com/a/6062799, Update 2.
     df_copy = df.copy()
+
     def check_df_unchanged():
         try:
             pd.testing.assert_frame_equal(df, df_copy, check_less_precise=8)
@@ -53,6 +54,7 @@ def austin_data(request):
                               "input data! See below:\n") +
                              str(exc))
                    .with_traceback(sys.exc_info()[2]))
+
     request.addfinalizer(check_df_unchanged)
 
     return {'df': df, 'gphr': gphr, 'net': net, 'gridangle': gridangle_austin}

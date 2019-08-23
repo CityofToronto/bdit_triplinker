@@ -1,7 +1,7 @@
 """Pytest scripts to test bipartite linker submodule."""
 
-import pytest
-import numpy as np
+# import pytest
+# import numpy as np
 import networkx as nx
 # import pandas as pd
 
@@ -135,7 +135,7 @@ class TestMaxCardinalityLinkerSimple(SimpleBipartiteGraphTests):
     def test_maxcardinality_matching(self):
         linker = lb.MaxCardinalityLinker()
         for i in range(len(self.Graphs)):
-            Gsoln_ref, dmatch_ref = self.get_digraph_from_matching(
+            Gsoln_ref, _dummy = self.get_digraph_from_matching(
                 self.expected_matchings[i], self.Graphs[i])
             assert utils.graphs_equivalent(
                 Gsoln_ref, linker.get_solution(self.Graphs[i]))

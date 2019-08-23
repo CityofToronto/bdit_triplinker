@@ -2,9 +2,6 @@
 Methods for linking ridesourcing trips together.
 """
 import networkx as nx
-import numpy as np
-import pandas as pd
-import tqdm
 
 
 class GreedyLinker:
@@ -29,14 +26,14 @@ class GreedyLinker:
         elif whichgreed == 'driver':
             self._passgreed = False
         else:
-            return ValueError("'whichgreed' must be 'passenger' or 'driver'.")
+            raise ValueError("'whichgreed' must be 'passenger' or 'driver'.")
 
         self.mintype = mintype
 
     @property
     def whichgreed(self):
         return "Passenger" if self._passgreed else "Driver"
-    
+
     def _get_greedy_min_edge(self, c_edges, Gw):
         """Determines smallest feasible edge in Gw."""
 
@@ -82,11 +79,11 @@ class GreedyLinker:
             else:
                 c_edges = list(Gw.out_edges(node))
             if len(c_edges):
-                min_edge = get_greedy_min_edge(c_edges, Gw, mintype)
+                min_edge = self._get_greedy_min_edge(c_edges, Gw)
                 # Add connection to solution.
                 Gsoln.add_edge(*min_edge, **Gw.edges[min_edge])
-                # We won't be going back to node, so we can freely delete all links
-                # to node given by edge[1].
+                # We won't be going back to node, so we can freely delete all
+                # links to node given by edge[1].
                 if self._passgreed:
                     Gw.remove_edges_from(list(Gw.out_edges(min_edge[0])))
                 else:

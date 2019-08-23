@@ -84,9 +84,8 @@ class TestUtils:
         expected_paths.append(
             [['A', 'D'], ['B', 'E'], ['C', 'F']])
 
-        for i in range(len(self.Graphs)):
+        for i in range(len(Graphs)):
             paths = utils.get_paths(Graphs[i])
             # Path order depends on node iterator order, which appears to be
             # system/OS dependent, so compare sorted paths.
             assert sorted(paths) == sorted(expected_paths[i])
-
