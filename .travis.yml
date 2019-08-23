@@ -31,10 +31,6 @@ before_install:
 
 install:
   # install miniconda
-  after_success:
-    # If coveralls.io is set up for this package, uncomment the line below.
-    # The coveragerc file may be customized as needed for your package.
-    - if [[ $SETUP_CMD == *coverage* ]]; then coveralls --rcfile='baseband/tests/coveragerc'; fi
   # pip and conda will also need OpenSSL for Windows
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then
       bash miniconda.sh -b -p $HOME/miniconda;
@@ -51,13 +47,9 @@ install:
   - echo "Python $CONDA_PYTHON running on $TRAVIS_OS_NAME";
   - conda env create --name test-environment python=$CONDA_PYTHON --file=./triplinker/tests/travis_miniconda/env.${CONDA_PYTHON}.yml;
   - conda activate test-environment;
+  - pip install --upgrade pip;
   - conda --version ; python --version ; pip --version;
-  - pip install -r requirements.txt
-
-os:
-  - linux
-  - windows
-  - osx
+  - pip install --user -r requirements.txt
 
 script:
   - pytest -s -v --pyargs triplinker
