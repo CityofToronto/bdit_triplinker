@@ -21,11 +21,12 @@ eg. taxi companies).
 ### Dependencies
 
 ```
-networkx==2.2
-numpy>=1.14
-pandas>=0.23
-pytest>=3.8.0
-scikit-learn>=0.20
+networkx>=2.2
+numpy>=1.16
+pandas>=0.24
+tqdm>=4.32
+pytest>=5.0.0
+ortools>=7.1
 ```
 
 ### Installation
