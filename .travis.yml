@@ -3,14 +3,16 @@
 
 language : shell
 
+# Travis's build matrix will create runs for every single 
+# Sadly I couldn't find a way to nest environmental variables so
+# every combination is run.  If we really need to do that, we
+# can explicitly define a build matrix
+# https://docs.travis-ci.com/user/build-matrix/
 env:
-  - CONDA_PYTHON=3.5
-  - CONDA_PYTHON=3.6
-  - CONDA_PYTHON=3.7
-  - NUMPY_VERSION=1.13
-  - NUMPY_VERSION=1.16
-  - NETWORKX_VERSION=0.22
-  - NETWORKX_VERSION=0.23
+  - CONDA_PYTHON=3.5 NUMPY_VERSION=1.13 NETWORKX_VERSION=0.22
+  - CONDA_PYTHON=3.5 NUMPY_VERSION=1.16 NETWORKX_VERSION=0.23
+  - CONDA_PYTHON=3.6 NUMPY_VERSION=1.13 NETWORKX_VERSION=0.22
+  - CONDA_PYTHON=3.7 NUMPY_VERSION=1.13 NETWORKX_VERSION=0.22
 
 os:
   - linux
@@ -57,7 +59,11 @@ install:
   - pip install --user -r ./triplinker/tests/travis_miniconda/requirements.txt
 
 script:
-  - pytest -s -v --pyargs triplinker
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+      export PATH=$PATH:";C:\Users\travis\AppData\Roaming\Python\Python35\Scripts;C:\Users\travis\AppData\Roaming\Python\Python36\Scripts;C:\Users\travis\AppData\Roaming\Python\Python37\Scripts";
+      echo "$PATH";
+    fi;
+  - python -m pytest -s -v triplinker
 
 after_success:
   - coveralls --rcfile='./coveragerc'
