@@ -59,11 +59,10 @@ install:
   - pip install --user -r ./triplinker/tests/travis_miniconda/requirements.txt
 
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
-      export PATH=$PATH:";C:\Users\travis\AppData\Roaming\Python\Python35\Scripts;C:\Users\travis\AppData\Roaming\Python\Python36\Scripts;C:\Users\travis\AppData\Roaming\Python\Python37\Scripts";
-      echo "$PATH";
-    fi;
+  # Annoyingly for Windows systems pytest is installed in a folder not included
+  # in PATH - the solution is either to use the syntax below, or append to PATH
+  # (which is harder).
   - python -m pytest -s -v triplinker
 
 after_success:
-  - coveralls --rcfile='./coveragerc'
+  - coveralls --rcfile='.coveragerc'
