@@ -49,6 +49,10 @@ pytest -s -v --pyargs triplinker
 
 ## Project Status
 
+[![Build Status](https://travis-ci.org/CityofToronto/bdit_triplinker.svg?branch=master)](https://travis-ci.org/CityofToronto/bdit_triplinker)
+
+[![Coverage Status](https://coveralls.io/repos/github/CityofToronto/bdit_triplinker/badge.svg?branch=master)](https://coveralls.io/github/CityofToronto/bdit_triplinker?branch=master)
+
 ## License
 
 Triplinker is licensed under the GNU General Public License v3.0 - see the
