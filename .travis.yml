@@ -1,0 +1,68 @@
+# From https://github.com/kangwonlee/travis-yml-conda-posix-nt/blob/master/.travis.yml
+# See alternative here: https://docs.travis-ci.com/user/languages/python/#running-python-tests-on-multiple-operating-systems
+
+language : shell
+
+# Travis's build matrix will create runs for every single 
+# Sadly I couldn't find a way to nest environmental variables so
+# every combination is run.  If we really need to do that, we
+# can explicitly define a build matrix
+# https://docs.travis-ci.com/user/build-matrix/
+env:
+  - CONDA_PYTHON=3.5 NUMPY_VERSION=1.13 NETWORKX_VERSION=0.22
+  - CONDA_PYTHON=3.5 NUMPY_VERSION=1.16 NETWORKX_VERSION=0.23
+  - CONDA_PYTHON=3.6 NUMPY_VERSION=1.13 NETWORKX_VERSION=0.22
+  - CONDA_PYTHON=3.7 NUMPY_VERSION=1.13 NETWORKX_VERSION=0.22
+
+os:
+  - linux
+  - windows
+  - osx
+
+before_install:
+  # set conda path info
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then
+      MINICONDA_PATH=$HOME/miniconda;
+      MINICONDA_SUB_PATH=$MINICONDA_PATH/bin;
+    elif [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+      MINICONDA_PATH=/c/tools/miniconda3/;
+      MINICONDA_PATH_WIN=`cygpath --windows $MINICONDA_PATH`;
+      MINICONDA_SUB_PATH=$MINICONDA_PATH/Scripts;
+    fi;
+  # obtain miniconda installer
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    elif  [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
+    fi;
+
+install:
+  # install miniconda
+  # pip and conda will also need OpenSSL for Windows
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then
+      bash miniconda.sh -b -p $HOME/miniconda;
+    elif  [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+      choco install openssl.light;
+      choco install miniconda3 --params="'/AddToPath:1 /D:$MINICONDA_PATH_WIN'";
+    fi;
+  - export PATH="$MINICONDA_PATH:$MINICONDA_SUB_PATH:$PATH";
+  # for conda version 4.4 or later
+  - source $MINICONDA_PATH/etc/profile.d/conda.sh;
+  - hash -r;
+  - conda config --set always_yes yes --set changeps1 no;
+  - conda update -q conda;
+  - echo "Python $CONDA_PYTHON running on $TRAVIS_OS_NAME";
+  - conda env create --name test-environment python=$CONDA_PYTHON --file=./triplinker/tests/travis_miniconda/env.${CONDA_PYTHON}.yml;
+  - conda activate test-environment;
+  - python -m pip install --upgrade pip;
+  - conda --version ; python --version ; pip --version;
+  - pip install --user -r ./triplinker/tests/travis_miniconda/requirements.txt
+
+script:
+  # Annoyingly for Windows systems pytest is installed in a folder not included
+  # in PATH - the solution is either to use the syntax below, or append to PATH
+  # (which is harder).
+  - python -m pytest -s -v triplinker
+
+after_success:
+  - coveralls --rcfile='.coveragerc'

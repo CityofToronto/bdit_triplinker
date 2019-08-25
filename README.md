@@ -21,11 +21,13 @@ eg. taxi companies).
 ### Dependencies
 
 ```
-networkx==2.2
-numpy>=1.14
-pandas>=0.23
-pytest>=3.8.0
-scikit-learn>=0.20
+networkx>=2.2
+numpy>=1.16
+pandas>=0.24
+tqdm>=4.32
+pytest>=5.0.0
+python-coveralls>=2.9
+ortools>=6.7
 ```
 
 ### Installation
@@ -46,6 +48,10 @@ pytest -s -v --pyargs triplinker
 ```
 
 ## Project Status
+
+[![Build Status](https://travis-ci.org/CityofToronto/bdit_triplinker.svg?branch=master)](https://travis-ci.org/CityofToronto/bdit_triplinker)
+
+[![Coverage Status](https://coveralls.io/repos/github/CityofToronto/bdit_triplinker/badge.svg?branch=master)](https://coveralls.io/github/CityofToronto/bdit_triplinker?branch=master)
 
 ## License
 

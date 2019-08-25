@@ -1,0 +1,7 @@
+networkx>=${NETWORKX_VERSION}
+numpy>=${NUMPY_VERSION}
+pandas>=0.23
+tqdm>=4.32
+pytest>=5.0.0
+coveralls>=1.8
+ortools>=6.7
