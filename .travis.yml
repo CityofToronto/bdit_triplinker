@@ -65,4 +65,4 @@ script:
   - python -m pytest -s -v triplinker
 
 after_success:
-  - coveralls --rcfile='.coveragerc'
+  - coveralls --verbose --rcfile='.coveragerc'
