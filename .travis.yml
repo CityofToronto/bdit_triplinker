@@ -67,4 +67,5 @@ script:
   - python -m coverage run --source triplinker -m py.test
 
 after_success:
-  - coveralls --verbose --rcfile='.coveragerc'
+  # Can turn on --verbose for troubleshooting.
+  - coveralls --rcfile='.coveragerc'
