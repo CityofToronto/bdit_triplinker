@@ -61,8 +61,11 @@ install:
 script:
   # Annoyingly for Windows systems pytest is installed in a folder not included
   # in PATH - the solution is either to use the syntax below, or append to PATH
-  # (which is harder).
-  - python -m pytest -s -v triplinker
+  # (which is harder).  "coverage" is to run coverage on top of pytest, as noted
+  # in https://coveralls-python.readthedocs.io/en/latest/usage/index.html.
+  #- python -m pytest -s -v triplinker
+  - python -m coverage run --source triplinker -m py.test
 
 after_success:
+  # Can turn on --verbose for troubleshooting.
   - coveralls --rcfile='.coveragerc'
