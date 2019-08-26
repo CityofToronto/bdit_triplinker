@@ -6,26 +6,21 @@ class BipartiteLinkerBase:
     """Base class for bipartite linking algorithms."""
 
     @staticmethod
-    def digraph_to_bipartite(G, return_top_nodes=True, return_digraph=False):
+    def digraph_to_bipartite(G):
         """Convert digraph G into a bipartite graph Gb.
 
         Parameters
         ----------
         G : networkx.classes.digraph.DiGraph
             Digraph.
-        return_top_nodes : bool, optional
-            If `True` (default), returns "top" nodes of bipartite graph as well
-            as digraph.  These are needed to resolve ambiguities when running
-            networkx.bipartite.maximum_matching.
-        return_digraph : bool, optional
-            If `True`, creates a bipartite digraph.  Default: `False`.
 
         Returns
         -------
-        Gb : networkx.classes.graph.Graph
-            (Undirected) bipartite graph.
+        Gb : networkx.classes.graph.DiGraph
+            Bipartite digraph.
         nodesb_top : list
-            "Top" nodes of bipartite graph.
+            "Top" nodes of bipartite digraph (which may only have departing
+            links).
 
         Notes
         -----
@@ -34,10 +29,7 @@ class BipartiteLinkerBase:
         https://networkx.github.io/documentation/stable/reference/algorithms/bipartite.html
 
         """
-        if return_digraph:
-            Gb = nx.DiGraph()
-        else:
-            Gb = nx.Graph()
+        Gb = nx.DiGraph()
         nodesb_top = []
         nodesb_bottom = []
         for item in list(G.nodes):
@@ -54,9 +46,7 @@ class BipartiteLinkerBase:
                                    links[link].copy()))
         Gb.add_edges_from(edgesb)
 
-        if return_top_nodes:
-            return Gb, nodesb_top
-        return Gb
+        return Gb, nodesb_top
 
     @staticmethod
     def matching_to_digraph(G, matching, return_matching=False,
@@ -154,6 +144,10 @@ class MaxCardinalityLinker(BipartiteLinkerBase):
 
         """
         Gb, nodesb_top = self.digraph_to_bipartite(G)
-        matching = nx.bipartite.maximum_matching(Gb, top_nodes=nodesb_top)
+        # H-K and Eppstein matching algos require undirected graph, or will
+        # fail silently and return an empty set.
+        # https://networkx.github.io/documentation/latest/reference/algorithms/generated/networkx.algorithms.bipartite.matching.hopcroft_karp_matching.html
+        matching = nx.bipartite.maximum_matching(
+            Gb.to_undirected(), top_nodes=nodesb_top)
         return self.matching_to_digraph(G, matching,
                                         return_matching=return_matching)

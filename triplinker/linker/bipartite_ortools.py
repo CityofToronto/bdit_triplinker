@@ -3,6 +3,7 @@ Linking methods that use Google's OR-Tools package
 (https://developers.google.com/optimization/).
 """
 import numpy as np
+import networkx as nx
 from ortools.graph import pywrapgraph as orgraph
 from ortools.linear_solver import pywraplp as orls
 
@@ -62,8 +63,9 @@ class MinWeightMaxCardinalityLinker(ORLinkerBase):
                 int(np.round(self._modifier *
                              self.Gw.edges[edge]['overhead_time'])))
 
-    def get_max_cardinality(self):
-        self.max_card = lb.get_vazifeh_solution(self.Gw).number_of_edges()
+    def get_max_cardinality(self, Gdb, nodesb_top):
+        self.max_card = nx.bipartite.maximum_matching(
+            Gdb.to_undirected(), top_nodes=nodesb_top).number_of_edges()
 
     def get_nodes_and_converters(self, nodesb_top):
         super().get_nodes_and_converters(nodesb_top)
@@ -151,8 +153,7 @@ class MinWeightMaxCardinalityLinker(ORLinkerBase):
         self.get_max_cardinality()
 
         # Get bipartite digraph.
-        Gdb, nodesb_top = lb.digraph_to_bipartite(
-            self.Gw, return_digraph=True)
+        Gdb, nodesb_top = self.digraph_to_bipartite(self.Gw)
 
         # Converters for node names to numerical indices.
         self.get_nodes_and_converters(nodesb_top)
@@ -163,7 +164,7 @@ class MinWeightMaxCardinalityLinker(ORLinkerBase):
         # Get matching.
         matching = self.flow_soln_to_matching()
 
-        return lb.matching_to_digraph(
+        return self.matching_to_digraph(
             self.Gw, matching, return_matching=return_matching)
 
 
@@ -294,8 +295,7 @@ class MinWeightMaximalLinker(ORLinkerBase):
         self.get_weighted_graph(G, max_weight=max_weight)
 
         # Get bipartite digraph.
-        Gdb, nodesb_top = lb.digraph_to_bipartite(
-            self.Gw, return_digraph=True)
+        Gdb, nodesb_top = self.digraph_to_bipartite(self.Gw)
 
         # Converters for node names to numerical indices, for generating
         # matching from solution.
@@ -310,5 +310,5 @@ class MinWeightMaximalLinker(ORLinkerBase):
         # Get matching.
         matching = self.mip_soln_to_matching()
 
-        return lb.matching_to_digraph(
+        return self.matching_to_digraph(
             self.Gw, matching, return_matching=return_matching)

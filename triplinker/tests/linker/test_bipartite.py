@@ -66,7 +66,7 @@ class SimpleBipartiteGraphTests:
 
         Based on functions early in triplinker's development.
         """
-        Gb = nx.Graph()
+        Gb = nx.DiGraph()
         nodesb_top = []
         nodesb_bottom = []
 
@@ -112,8 +112,7 @@ class TestBipartiteLinkerBase(SimpleBipartiteGraphTests):
         base = lb.BipartiteLinkerBase()
         for i in range(len(self.Graphs)):
             Gb_ref, topnodes_ref = self.get_bipartite_graph(self.Graphs[i])
-            Gb, topnodes = base.digraph_to_bipartite(self.Graphs[i],
-                                                     return_top_nodes=True)
+            Gb, topnodes = base.digraph_to_bipartite(self.Graphs[i])
             assert utils.graphs_equivalent(Gb_ref, Gb)
             assert topnodes_ref == topnodes
 
