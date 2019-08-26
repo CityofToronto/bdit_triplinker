@@ -1,7 +1,6 @@
 """Module for linking trips together."""
 
-from .base import BatchedLinker
-
+from .batched import BatchedLinker
 from .bipartite import MaxCardinalityLinker
 
 # If Google OR-Tools is available, import additional linkers.
