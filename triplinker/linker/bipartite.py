@@ -18,35 +18,31 @@ class BipartiteLinkerBase:
         -------
         Gb : networkx.classes.graph.DiGraph
             Bipartite digraph.
-        nodesb_top : list
-            "Top" nodes of bipartite digraph (which may only have departing
-            links).
-
-        Notes
-        -----
-        By default, graph is undirected for compatibility with networkx's
-        Hopcroft-Karp and Eppstein matching algorithms.  See
-        https://networkx.github.io/documentation/stable/reference/algorithms/bipartite.html
-
         """
         Gb = nx.DiGraph()
-        nodesb_top = []
-        nodesb_bottom = []
-        for item in list(G.nodes):
-            nodesb_top.append(str(item) + '_i')
-            nodesb_bottom.append(str(item) + '_o')
+
+        # Need to return nodesb_top for matching purposes.
+        nodesb_top = map(lambda node: str(node) + '_i', G.nodes())
+        nodesb_bottom = map(lambda node: str(node) + '_o', G.nodes())
         Gb.add_nodes_from(nodesb_top, bipartite=0)
         Gb.add_nodes_from(nodesb_bottom, bipartite=1)
 
-        edgesb = []
-        for node, links in G.adjacency():
-            if len(links):
-                for link in links.keys():
-                    edgesb.append((str(node) + '_o', str(link) + '_i',
-                                   links[link].copy()))
+        edgesb = map(lambda edge: (
+            str(edge[0]) + '_o', str(edge[1]) + '_i',
+            G.edges[edge].copy()), G.edges())
         Gb.add_edges_from(edgesb)
 
-        return Gb, nodesb_top
+        return Gb
+    
+    @staticmethod
+    def get_top_nodes(Gb):
+        """Get "top" nodes (departing links only) of bipartite digraph."""
+        return list(
+            sorted(filter(lambda node: node.endswith('_i'), Gb.nodes())))
+
+    @staticmethod
+    def get_directed_matching(Gsoln):
+        return sorted(list(Gsoln.edges()))
 
     @staticmethod
     def matching_to_digraph(G, matching, return_matching=False,
@@ -63,9 +59,6 @@ class BipartiteLinkerBase:
         return_matching : bool, optional
             If `True`, returns directed matching as well as digraph.
             Default: `False`.
-        check_degree: bool, optional
-            If `True`, checks that nodes in the digraph solution have at most
-            degree 2 (one incoming, one outgoing edge).  Default: `False`.
 
         Returns
         -------
@@ -99,11 +92,6 @@ class BipartiteLinkerBase:
         Gsoln = nx.DiGraph()
         Gsoln.add_nodes_from(G)
         Gsoln.add_edges_from(directed_matching)
-
-        if check_degree:
-            for node in Gsoln.nodes():
-                assert Gsoln.degree(node) <= 2, (
-                    "node {0} has degree {1}".format(node, Gsoln.degree(node)))
 
         if return_matching:
             return Gsoln, directed_matching
@@ -143,7 +131,8 @@ class MaxCardinalityLinker(BipartiteLinkerBase):
             returned if `return_matching` is `True`.
 
         """
-        Gb, nodesb_top = self.digraph_to_bipartite(G)
+        Gb = self.digraph_to_bipartite(G)
+        nodesb_top = self.get_top_nodes(Gb)
         # H-K and Eppstein matching algos require undirected graph, or will
         # fail silently and return an empty set.
         # https://networkx.github.io/documentation/latest/reference/algorithms/generated/networkx.algorithms.bipartite.matching.hopcroft_karp_matching.html

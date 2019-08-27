@@ -112,9 +112,15 @@ class TestBipartiteLinkerBase(SimpleBipartiteGraphTests):
         base = lb.BipartiteLinkerBase()
         for i in range(len(self.Graphs)):
             Gb_ref, topnodes_ref = self.get_bipartite_graph(self.Graphs[i])
-            Gb, topnodes = base.digraph_to_bipartite(self.Graphs[i])
+            Gb = base.digraph_to_bipartite(self.Graphs[i])
             assert utils.graphs_equivalent(Gb_ref, Gb)
-            assert topnodes_ref == topnodes
+    
+    def test_get_top_nodes(self):
+        base = lb.BipartiteLinkerBase()
+        for i in range(len(self.Graphs)):
+            Gb_ref, topnodes_ref = self.get_bipartite_graph(self.Graphs[i])
+            topnodes = base.get_top_nodes(Gb_ref)
+            assert sorted(topnodes_ref) == sorted(topnodes)
 
     def test_bipartite_to_digraph(self):
         base = lb.BipartiteLinkerBase()
@@ -144,3 +150,12 @@ class TestMaxCardinalityLinkerProduction:
     # TO DO: add production-level tests utilizing Austin data.  These won't be able
     # to test
     pass
+
+        # check_degree: bool, optional
+        #     If `True`, checks that nodes in the digraph solution have at most
+        #     degree 2 (one incoming, one outgoing edge).  Default: `False`.
+
+        # if check_degree:
+        #     for node in Gsoln.nodes():
+        #         assert Gsoln.degree(node) <= 2, (
+        #             "node {0} has degree {1}".format(node, Gsoln.degree(node)))

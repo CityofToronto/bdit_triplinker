@@ -24,12 +24,11 @@ class ORLinkerBase(BipartiteLinkerBase):
     def get_weighted_graph(self, G):
         raise NotImplementedError
 
-    def get_nodes_and_converters(self, nodesb_top):
+    def get_nodes_and_converters(self, Gdb):
         # Top nodes are pickups, bottom nodes dropoffs.
-        self._dest_nodes = nodesb_top
-        self._or_nodes = ['{0}_o'.format(node[:-2])
-                          for node in self._dest_nodes]
-        self._all_nodes = self._or_nodes + self._dest_nodes
+        self._dest_nodes = self.get_top_nodes(Gdb)
+        self._or_nodes = list(
+            sorted(filter(lambda node: node.endswith('_o'), Gdb.nodes())))
 
 
 class MinWeightMaxCardinalityLinker(ORLinkerBase):
@@ -63,12 +62,15 @@ class MinWeightMaxCardinalityLinker(ORLinkerBase):
                 int(np.round(self._modifier *
                              self.Gw.edges[edge]['overhead_time'])))
 
-    def get_max_cardinality(self, Gdb, nodesb_top):
-        self.max_card = nx.bipartite.maximum_matching(
-            Gdb.to_undirected(), top_nodes=nodesb_top).number_of_edges()
+    def get_max_cardinality(self, Gdb):
+        matching = nx.bipartite.maximum_matching(
+            Gdb.to_undirected(), top_nodes=self._dest_nodes)
+        self.max_card = self.matching_to_digraph(self.Gw,
+                                                 matching).number_of_edges()
 
-    def get_nodes_and_converters(self, nodesb_top):
-        super().get_nodes_and_converters(nodesb_top)
+    def get_nodes_and_converters(self, Gdb):
+        super().get_nodes_and_converters(Gdb)
+        self._all_nodes = self._or_nodes + self._dest_nodes
 
         self.nodes_idx = dict(
             [(node, i + 1) for i, node in enumerate(self._all_nodes)])
@@ -153,10 +155,10 @@ class MinWeightMaxCardinalityLinker(ORLinkerBase):
         self.get_max_cardinality()
 
         # Get bipartite digraph.
-        Gdb, nodesb_top = self.digraph_to_bipartite(self.Gw)
+        Gdb = self.digraph_to_bipartite(self.Gw)
 
         # Converters for node names to numerical indices.
-        self.get_nodes_and_converters(nodesb_top)
+        self.get_nodes_and_converters(Gdb)
 
         # Solve.
         self.solve_flow(Gdb)
@@ -295,11 +297,11 @@ class MinWeightMaximalLinker(ORLinkerBase):
         self.get_weighted_graph(G, max_weight=max_weight)
 
         # Get bipartite digraph.
-        Gdb, nodesb_top = self.digraph_to_bipartite(self.Gw)
+        Gdb = self.digraph_to_bipartite(self.Gw)
 
         # Converters for node names to numerical indices, for generating
         # matching from solution.
-        self.get_nodes_and_converters(nodesb_top)
+        self.get_nodes_and_converters(Gdb)
 
         # Get gain matrix.
         self.get_gain_matrix(Gdb)

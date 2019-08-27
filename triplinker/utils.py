@@ -1,6 +1,5 @@
-"""
-Utilities supporting the other modules and test suite.
-"""
+"""Utilities supporting the other modules and test suite."""
+
 import numpy as np
 
 
