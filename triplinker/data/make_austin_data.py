@@ -41,13 +41,14 @@ def fixtime_utcminus10_nozone(t):
 def read_csvs(rawpath):
     # Read in raw data.
     df_a = pd.read_csv(rawpath + '/Rides_DataA.csv')
-    df_b = pd.read_csv(rawpath + '/Rides_DataB.csv')
+    df_b = pd.read_csv(rawpath + '/Rides_DataB.csv',
+                       usecols=(0, 6, 10, 11, 12, 13, 14, 15))
 
     # Merge the two tables.
     df = pd.merge(df_a, df_b, on='RIDE_ID')
     df.reset_index(inplace=True, drop=True)
 
-    # Fix timestamps.
+    # Fix timestamps, then strip time zones.
     for name in ['started_on', 'completed_on', 'driver_reached_on']:
         df[name] = pd.to_datetime(df[name])
     df['dispatched_on'] = (pd.to_datetime(df['dispatched_on'], utc=True)
@@ -86,7 +87,16 @@ if __name__ == '__main__':
     df = read_csvs(args.rawpath)
 
     # Output only the week of March 31, 2017 as test data.
-    timespan = ((df['dispatch_time'] >= '2017/03/13 04:00:00') &
-                (df['dispatch_time'] < '2017/03/20 04:00:00'))
-    dfs = df.loc[timespan, :]
+    timespan = ((df['dispatch_time'] >= '2017/03/13 04:00:00-05:00') &
+                (df['dispatch_time'] < '2017/03/20 04:00:00-05:00'))
+    
+    #.dt.tz_localize(None)
+    #.tz_localize(tz=None)
+
+    dfs = df.loc[timespan, :].copy()
+    # Strip time zone stamps before outputting.
+    for name in ['dispatch_time', 'driver_accept_time',
+                 'driver_reach_start_time', 'start_time', 'complete_time']:
+        dfs[name] = dfs[name].dt.tz_localize(None)
+
     dfs.to_csv(args.outfile, index=False)
