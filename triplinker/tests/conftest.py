@@ -2,7 +2,7 @@
 
 Main purpose is to load the sample Ride Austin data from `../../data`, and then
 passing it on as a fixture to the various tests.  This allows us to load the
-data just once but use it in multiple tests
+data just once but use it in multiple tests.
 
 References:
 https://docs.pytest.org/en/latest/fixture.html#fixture-finalization-executing-teardown-code
@@ -26,11 +26,17 @@ def austin_data(request):
 
     df = pd.read_csv(AUSTIN_DATA, parse_dates=[1, 2, 5, 6, 9])
     # Only consider 6 - 7:30 PM to make tests go faster.
-    df.drop(labels=['ptctripid', 'request_datetime',
-                    'driver_accept_datetime',
-                    'request_latitude', 'request_longitude',
-                    'driver_reach_datetime',
-                    'trip_distance', 'driver_id'], axis=1, inplace=True)
+    df.drop(labels=['ID', 'dispatch_time',
+                    'driver_accept_time',
+                    'dispatch_lat', 'dispatch_lon',
+                    'driver_reach_start_time'], axis=1, inplace=True)
+    df.reset_index(inplace=True)
+    df.rename({'index': 'ptctripid', 'start_time': 'pickup_datetime',
+               'start_lat': 'pickup_latitude', 'start_lon': 'pickup_longitude',
+               'complete_time': 'dropoff_datetime',
+               'complete_lat': 'dropoff_latitude',
+               'complete_lon': 'dropoff_longitude'}, axis=1, inplace=True)
+
     df = df.loc[
         ((df['pickup_datetime'] >= '2017-03-15 18:00:00') &
          (df['pickup_datetime'] < '2017-03-15 19:30:00')), :]

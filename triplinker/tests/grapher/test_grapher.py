@@ -1,34 +1,5 @@
 # """Pytest scripts to test grapher module.
 
-# To create the small csv file used in the examples, used this script:
-
-# ```Python
-# import numpy as np
-# import pandas as pd
-# from triplinker import grapher
-# np.random.seed(42)
-# nyc_tlc = pd.read_csv('./nyc_tlc_20110119morning.csv', parse_dates=[0, 1],
-#                       infer_datetime_format=True)
-# nyc_tlc.reset_index(inplace=True)
-# nyc_tlc.rename(columns={'index': 'id'}, inplace=True)
-# gphr = grapher.TripGrapherHaversine(nyc_tlc, 2., pd.Timedelta('5 minutes'))
-# ids = []
-# for i, row in nyc_tlc.iloc[:25, :].iterrows():
-#     feasible = gphr.get_feasible_pickups(row, 2.,
-#                                          pd.Timedelta('5 minutes'), 7.56)
-#     ids.append(feasible.index.values)
-# ids_sorted = np.sort(np.concatenate(ids))
-# ids_full = np.unique(np.concatenate([np.random.randint(0, high=10000,
-#                                      size=500), ids_sorted]))
-# trips_subset = nyc_tlc.iloc[ids_full, :]
-# # This partly randomizes the data frame.
-# trips_subset.sort_values('pickup_datetime').to_csv('./test_grapher_data.csv',
-#                                                    index=False)
-# ```
-# Only 25 (semi-random) trips are guaranteed to have feasible connections.
-# 
-# """
-
 import pytest
 import numpy as np
 import pandas as pd
