@@ -27,6 +27,7 @@ pandas>=0.24
 tqdm>=4.32
 pytest>=5.0.0
 python-coveralls>=2.9
+pytz>=2018.3
 ortools>=6.7
 ```
 
